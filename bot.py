@@ -1,5 +1,6 @@
 import os
 import asyncio
+import sqlite3
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
@@ -10,15 +11,37 @@ TOKEN = "9237449351:AAFquO0Oihz0zzFr7OQwRMlSmwfhIVNDU80"
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 ADMIN_ID = 1061676621
+
+def init_db():
+    conn = sqlite3.connect("bot.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY,
+            username TEXT,
+            first_name TEXT
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+init_db()
 @dp.message(Command("admin"))
 async def admin_handler(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         await message.answer("⛔ غير مسموح لك بالدخول")
         return
 
+    users = get_users_count()
+
     await message.answer(
-        "👋 أهلاً بك في لوحة تحكم المدير!\n"
-        "سيتم تجهيز الإحصائيات قريباً."
+        "⚙️ لوحة تحكم المدير\n\n"
+        f"👥 عدد المستخدمين: {users}\n"
+        "━━━━━━━━━━━━\n"
+        "مرحباً بك في لوحة الإدارة!"
     )
 # زر أساسي واحد يظهر للمستخدم في البداية
 def get_start_button():
@@ -35,11 +58,38 @@ def get_options_menu():
     builder.button(text="📘 تحميل فيديو فيسبوك", callback_data="opt_facebook")
     builder.adjust(1)
     return builder.as_markup()
+def save_user(user):
+    conn = sqlite3.connect("bot.db")
+    cursor = conn.cursor()
 
+    cursor.execute("""
+        INSERT INTO users (user_id, username, first_name)
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+        username = excluded.username,
+        first_name = excluded.first_name
+    """, (
+        user.id,
+        user.username,
+        user.first_name
+    ))
+
+    conn.commit()
+    conn.close()
+    def get_users_count():
+    conn = sqlite3.connect("bot.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM users")
+    count = cursor.fetchone()[0]
+
+    conn.close()
+    return count
 # أمر البدء مع جلب اسم المستخدم الحقيقي
 @dp.message(Command("start"))
 @dp.message(F.text == "🚀 ابدأ (Start)")
 async def start_handler(message: types.Message):
+    save_user(message.from_user)
     user_name = message.from_user.first_name or "صديقي"
     await message.answer(
         f"أهلاً بك يا **{user_name}** في بوتك الخاص للتحميل 🌟\n"
