@@ -9,7 +9,17 @@ TOKEN = "9237449351:AAFquO0Oihz0zzFr7OQwRMlSmwfhIVNDU80"
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
+ADMIN_ID = 1061676621
+@dp.message(Command("admin"))
+async def admin_handler(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ غير مسموح لك بالدخول")
+        return
 
+    await message.answer(
+        "👋 أهلاً بك في لوحة تحكم المدير!\n"
+        "سيتم تجهيز الإحصائيات قريباً."
+    )
 # زر أساسي واحد يظهر للمستخدم في البداية
 def get_start_button():
     builder = ReplyKeyboardBuilder()
